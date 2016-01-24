@@ -10,7 +10,7 @@ Recipe provides:
 # Install
 Use go get to install the latest version.
 ```
-go get github.com/gophergala2016/recipe
+go get github.com/gophergala2016/recipe/recipe
 ```
 
 # Usage
