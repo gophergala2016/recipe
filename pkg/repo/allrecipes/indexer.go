@@ -3,9 +3,9 @@ package allrecipes
 import (
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
+	"github.com/gophergala2016/recipe/pkg/repo"
 	"golang.org/x/net/context"
 	"strings"
-	"sync"
 )
 
 const (
@@ -30,59 +30,83 @@ func (e *entry) URL() string {
 	return e.url
 }
 
-func index(ctx context.Context) <-chan *entry {
-	limit := 10
-	queueCtx, queueCancel := context.WithCancel(ctx)
-	f := newFetcher(ctx, limit)
-	entries := make(chan *entry)
-	go parseLinks(ctx, queueCancel, f.responses(), entries)
-	go queueLinkFetching(queueCtx, f)
-	return entries
+type job struct {
+	url     string
+	err     error
+	doc     *goquery.Document
+	results []*entry
 }
 
-func queueLinkFetching(ctx context.Context, f *fetcher) {
-	defer f.close()
-	var (
-		url  string
-		page = 1
-	)
+func index(ctx context.Context, lcache repo.LocalCache) {
+	fetchQueue := make(chan *job)
+	parseQueue := make(chan *job)
+	cacheQueue := make(chan *job)
+
+	queueCtx, cancelQueueing := context.WithCancel(ctx)
+
+	// TODO support multiple fetch goroutines
+	// TODO Control closing of goroutines with contexts not channel closing
+
+	go queue(queueCtx, fetchQueue)
+	go fetch(ctx, fetchQueue, parseQueue)
+	go parse(ctx, parseQueue, cacheQueue)
+	cache(ctx, cacheQueue, lcache, cancelQueueing)
+	return
+}
+
+func queue(ctx context.Context, out chan<- *job) {
+	defer fmt.Println("DEBUG: queue returning")
+	page := 1
 	for {
+		j := &job{
+			url: fmt.Sprintf("%s/recipes/?sort=Newest&page=%d", mainpage, page),
+		}
 		select {
 		case <-ctx.Done():
+			close(out)
 			return
-		default:
+		case out <- j:
+			fmt.Printf("Queued: %s\n", j.url)
+			page++
 		}
-		url = fmt.Sprintf("%s/recipes/?sort=Newest&page=%d", mainpage, page)
-		if err := f.fetch(ctx, url); err != nil {
-			return
-		}
-		page++
 	}
 }
 
-type response struct {
-	doc *goquery.Document
-	err error
-}
-
-func parseLinks(ctx context.Context, cancelQueueing func(), in <-chan response, out chan<- *entry) {
-	defer close(out)
-	parsed := 0
-	debugLimit := 20
+func fetch(ctx context.Context, in <-chan *job, out chan<- *job) {
+	defer fmt.Println("DEBUG: fetch returning")
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case resp, ok := <-in:
+		case j, ok := <-in:
 			if !ok {
+				close(out)
 				return
 			}
-			if resp.err != nil {
+			j.doc, j.err = goquery.NewDocument(j.url)
+			if j.err != nil {
+				// TODO Do something with the error
 				continue
 			}
-			doc := resp.doc
+			out <- j
+		}
+	}
+}
+
+func parse(ctx context.Context, in <-chan *job, out chan<- *job) {
+	defer fmt.Println("DEBUG: parse returning")
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case j, ok := <-in:
+			if !ok {
+				close(out)
+				return
+			}
+			doc := j.doc
+			j.results = make([]*entry, 0)
 			articles := doc.Find("article")
-			docHasRecipeLinks := false
 			articles.Each(func(i int, article *goquery.Selection) {
 				as := article.ChildrenFiltered("a[data-internal-referrer-link='recipe hub']")
 				a := as.First()
@@ -90,7 +114,6 @@ func parseLinks(ctx context.Context, cancelQueueing func(), in <-chan response, 
 				if !exists {
 					return
 				}
-				docHasRecipeLinks = true
 
 				titleSelection := article.Find("ar-save-item")
 				title, exists := titleSelection.Attr("data-name")
@@ -101,84 +124,40 @@ func parseLinks(ctx context.Context, cancelQueueing func(), in <-chan response, 
 				descriptionSel := article.Find("div[class='rec-card__description']")
 				description := descriptionSel.Text()
 
-				out <- &entry{
+				j.results = append(j.results, &entry{
 					title:       title,
 					description: description,
 					url:         url,
-				}
+				})
 			})
-			parsed++
-			if !docHasRecipeLinks || parsed == debugLimit {
-				// Cancel queueing new fetch requests for links to recipes
+			out <- j
+		}
+	}
+}
+
+func cache(ctx context.Context, in <-chan *job, cache repo.LocalCache, cancelQueueing func()) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case j, ok := <-in:
+			if !ok {
+				return
+			}
+			if len(j.results) == 0 {
+				cancelQueueing()
+			}
+			hasNewResult := false
+			for _, res := range j.results {
+				if cache.Cached(res) {
+					continue
+				}
+				cache.Add(res)
+				hasNewResult = true
+			}
+			if !hasNewResult {
 				cancelQueueing()
 			}
 		}
-	}
-}
-
-type fetcher struct {
-	limit  int
-	ctx    context.Context
-	in     chan string
-	out    chan response
-	cancel func()
-	wg     sync.WaitGroup
-}
-
-func newFetcher(ctx context.Context, limit int) *fetcher {
-	fetchCtx, cancel := context.WithCancel(ctx)
-	f := &fetcher{
-		limit:  limit,
-		ctx:    fetchCtx,
-		cancel: cancel,
-		in:     make(chan string),
-		out:    make(chan response),
-	}
-	f.wg.Add(limit)
-	for i := 0; i < limit; i++ {
-		go f.run()
-	}
-	return f
-}
-
-func (f *fetcher) close() {
-	f.cancel()
-	f.wg.Wait()
-	close(f.in)
-	close(f.out)
-}
-
-func (f *fetcher) responses() <-chan response {
-	return f.out
-}
-
-func (f *fetcher) fetch(ctx context.Context, url string) error {
-	select {
-	case f.in <- url:
-		return nil
-	case <-ctx.Done():
-		return ctx.Err()
-	}
-}
-
-func (f *fetcher) run() {
-	defer f.wg.Done()
-	for {
-		select {
-		case req := <-f.in:
-			fetchDoc(f.ctx, req, f.out)
-		case <-f.ctx.Done():
-			return
-		}
-	}
-}
-
-func fetchDoc(ctx context.Context, url string, out chan<- response) {
-	doc, err := goquery.NewDocument(url)
-	select {
-	case out <- response{doc, err}:
-		return
-	case <-ctx.Done():
-		return
 	}
 }

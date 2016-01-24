@@ -5,13 +5,13 @@ import (
 	"io"
 	"os"
 	"strings"
-	"time"
 )
 
 type LocalCache interface {
 	Search(term string) ([]RecipeLink, error)
 	Add(RecipeLink) error
 	Close() error
+	Cached(RecipeLink) bool
 }
 
 type RecipeLink interface {
@@ -39,10 +39,8 @@ func (entry *jsonRecipeEntry) URL() string {
 }
 
 type JsonFileCache struct {
-	Entries     map[string]*jsonRecipeEntry `json:"entries"`
-	LastRefresh time.Time                   `json:"last_refresh"`
-	NewestEntry string                      `json:"newest_entry"`
-	fileName    string                      `json:"-"`
+	Entries  map[string]*jsonRecipeEntry `json:"entries"`
+	fileName string                      `json:"-"`
 }
 
 func (cache *JsonFileCache) Close() error {
@@ -53,6 +51,12 @@ func (cache *JsonFileCache) Close() error {
 	defer file.Close()
 	enc := json.NewEncoder(file)
 	return enc.Encode(cache)
+}
+
+func (cache *JsonFileCache) Cached(entry RecipeLink) bool {
+	id := entry.URL()
+	_, exists := cache.Entries[id]
+	return exists
 }
 
 func (cache *JsonFileCache) Add(entry RecipeLink) error {
@@ -69,8 +73,6 @@ func (cache *JsonFileCache) Add(entry RecipeLink) error {
 		RecipeURL:         entry.URL(),
 	}
 	cache.Entries[id] = jEntry
-	cache.NewestEntry = id
-	cache.LastRefresh = time.Now()
 	return nil
 }
 
@@ -88,9 +90,12 @@ func (cache *JsonFileCache) Search(term string) ([]RecipeLink, error) {
 }
 
 func OpenJsonFileCache(name string) (LocalCache, error) {
-	file, err := os.Create(name)
+	file, err := os.Open(name)
 	if err != nil {
-		return nil, err
+		file, err = os.Create(name)
+		if err != nil {
+			return nil, err
+		}
 	}
 	defer file.Close()
 	cache := &JsonFileCache{

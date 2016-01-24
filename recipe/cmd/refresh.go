@@ -23,6 +23,8 @@ package cmd
 import (
 	"github.com/gophergala2016/recipe/pkg/recipe"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+	"log"
 )
 
 // refreshCmd represents the refresh command
@@ -31,8 +33,15 @@ var refreshCmd = &cobra.Command{
 	Short: "Refresh all repositories.",
 	Long:  `Updates all repositories.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		cacheFileName := ""
-		recipe.Refresh(cacheFileName)
+		dbpath := ""
+		cacheMap := viper.Get("cache")
+		if cache, ok := cacheMap.(map[interface{}]interface{}); ok {
+			dbpath = cache["dbpath"].(string)
+		}
+
+		if err := recipe.Refresh(dbpath); err != nil {
+			log.Println(err)
+		}
 	},
 }
 

@@ -18,11 +18,7 @@ func New(cache repo.LocalCache) repo.Repository {
 }
 
 func (r *Repository) Refresh(ctx context.Context) error {
-	// TODO Use cache, only index until last entry is reached
-	entries := index(ctx)
-	for entry := range entries {
-		r.cache.Add(entry)
-	}
+	index(ctx, r.cache)
 	return nil
 }
 
