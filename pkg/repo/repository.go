@@ -24,6 +24,6 @@ type SearchOptions struct {
 
 type Repository interface {
 	Refresh(context.Context) error
-	Get(context.Context, string) (*schema.Recipe, error)
+	Get(context.Context, string) ([]*schema.Recipe, error)
 	Search(context.Context, string, SearchOptions) ([]RecipeLink, error)
 }

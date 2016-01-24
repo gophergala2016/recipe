@@ -1,6 +1,7 @@
 package allrecipes
 
 import (
+	"github.com/PuerkitoBio/goquery"
 	"github.com/gophergala2016/recipe/pkg/repo"
 	"github.com/gophergala2016/recipe/pkg/schema"
 	"golang.org/x/net/context"
@@ -22,13 +23,16 @@ func (r *Repository) Refresh(ctx context.Context) error {
 	return nil
 }
 
-func (r *Repository) Search(ctx context.Context, term string) ([]repo.RecipeLink, error) {
-	return r.cache.Search(term)
+func (r *Repository) Search(ctx context.Context, term string, opt repo.SearchOptions) ([]repo.RecipeLink, error) {
+	return r.cache.Search(term, opt)
 }
 
-func (r *Repository) Get(ctx context.Context, url string) (*schema.Recipe, error) {
-	// TODO Get recipe
-	return nil, nil
+func (r *Repository) Get(ctx context.Context, url string) ([]*schema.Recipe, error) {
+	doc, err := goquery.NewDocument(url)
+	if err != nil {
+		return nil, err
+	}
+	return schema.ParseRecipes(doc)
 }
 
 type Entry struct {
