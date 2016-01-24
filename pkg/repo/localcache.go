@@ -8,7 +8,7 @@ import (
 )
 
 type LocalCache interface {
-	Search(term string) ([]RecipeLink, error)
+	Search(term string, options SearchOptions) ([]RecipeLink, error)
 	Add(RecipeLink) error
 	Close() error
 	Cached(RecipeLink) bool
@@ -76,13 +76,15 @@ func (cache *JsonFileCache) Add(entry RecipeLink) error {
 	return nil
 }
 
-func (cache *JsonFileCache) Search(term string) ([]RecipeLink, error) {
+func (cache *JsonFileCache) Search(term string, options SearchOptions) ([]RecipeLink, error) {
 	if entry, ok := cache.Entries[term]; ok {
 		return []RecipeLink{entry}, nil
 	}
 	result := make([]RecipeLink, 0)
 	for _, value := range cache.Entries {
-		if strings.Contains(value.Description(), term) || strings.Contains(value.Title(), term) || strings.Contains(value.URL(), term) {
+		if strings.Contains(value.Description(), term) && options.Description ||
+			strings.Contains(value.Title(), term) && options.Title ||
+			strings.Contains(value.URL(), term) && options.URL {
 			result = append(result, value)
 		}
 	}

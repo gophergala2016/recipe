@@ -22,8 +22,18 @@ package cmd
 
 import (
 	"fmt"
-
+	"github.com/gophergala2016/recipe/pkg/recipe"
+	"github.com/gophergala2016/recipe/pkg/repo"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+	"log"
+	"strings"
+)
+
+var (
+	searchTitle       = true
+	searchURL         = false
+	searchDescription = false
 )
 
 // searchCmd represents the search command
@@ -32,12 +42,32 @@ var searchCmd = &cobra.Command{
 	Short: "Search for recipes matching the pattern.",
 	Long:  `Search the repositories for recipes matching the pattern.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// TODO: Work your own magic here
-		fmt.Println("search called")
+		dbpath := ""
+		cacheMap := viper.Get("cache")
+		if cache, ok := cacheMap.(map[interface{}]interface{}); ok {
+			dbpath = cache["dbpath"].(string)
+		}
+		term := strings.Join(args, "")
+		options := repo.SearchOptions{
+			Title:       searchTitle,
+			Description: searchDescription,
+			URL:         searchURL,
+		}
+		recipeLinks, err := recipe.Search(dbpath, term, options)
+		if err != nil {
+			log.Println(err)
+		}
+
+		for _, rl := range recipeLinks {
+			fmt.Printf("%s\t%s\n", rl.Title(), rl.URL())
+		}
 	},
 }
 
 func init() {
+	searchCmd.Flags().BoolVarP(&searchTitle, "searchtitle", "t", true, "if the title of the recipe should be searched")
+	searchCmd.Flags().BoolVarP(&searchURL, "searchurl", "u", true, "if the URL of the recipe should be searched")
+	searchCmd.Flags().BoolVarP(&searchTitle, "searchdescription", "d", true, "if the description of the recipe should be searched")
 	RootCmd.AddCommand(searchCmd)
 
 	// Here you will define your flags and configuration settings.
