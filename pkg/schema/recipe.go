@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
+	"strings"
 	"time"
 )
 
@@ -56,10 +57,10 @@ func ParseNutritionInformation(sel *goquery.Selection) (*NutritionInformation, e
 	}
 
 	caloriesSel := sel.Find("[itemprop='calories']")
-	calories := caloriesSel.Text()
+	calories := strings.TrimSpace(caloriesSel.Text())
 
 	fatContentSel := sel.Find("[itemprop='fatContent']")
-	fatContent := fatContentSel.Text()
+	fatContent := strings.TrimSpace(fatContentSel.Text())
 
 	return &NutritionInformation{
 		Calories:   calories,
@@ -114,10 +115,10 @@ func ParseRecipe(sel *goquery.Selection) (*Recipe, error) {
 	}
 
 	nameSel := sel.Find("[itemprop='name']")
-	recipe.Name = nameSel.Text()
+	recipe.Name = strings.TrimSpace(nameSel.Text())
 
-	authorSel := sel.Find("[itemprop='author']")
-	recipe.Author = authorSel.Text()
+	authorSel := sel.Find("[itemprop='author']").First()
+	recipe.Author = strings.TrimSpace(authorSel.Text())
 
 	datePublishedSel := sel.Find("[itemprop='datePublished']")
 	datePublishedText, exists := datePublishedSel.Attr("content")
@@ -144,7 +145,7 @@ func ParseRecipe(sel *goquery.Selection) (*Recipe, error) {
 	recipe.Image, _ = imageSel.Attr("src")
 
 	descriptionSel := sel.Find("[itemprop='description']")
-	recipe.Description = descriptionSel.Text()
+	recipe.Description = strings.TrimSpace(descriptionSel.Text())
 
 	return recipe, nil
 }

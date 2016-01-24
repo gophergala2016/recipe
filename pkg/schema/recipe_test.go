@@ -7,8 +7,57 @@ import (
 	"time"
 )
 
+type testCase struct {
+	fileName       string
+	expectedRecipe *Recipe
+}
+
+var testCases = []*testCase{
+	&testCase{
+		fileName: "example_recipe.html",
+		expectedRecipe: &Recipe{
+			CreativeWork: CreativeWork{
+				Thing: Thing{
+					Name:        "Mom's World Famous Banana Bread",
+					Image:       "bananabread.jpg",
+					Description: "This classic banana bread recipe comes\n  from my mom -- the walnuts add a nice texture and flavor to the banana\n  bread.",
+				},
+				Author:        "John Smith",
+				DatePublished: time.Date(2009, 5, 8, 0, 0, 0, 0, time.UTC),
+			},
+			Nutrition: &NutritionInformation{
+				Calories:   "240 calories",
+				FatContent: "9 grams fat",
+			},
+		},
+	},
+	&testCase{
+		fileName: "allrecipes_dot_com_recipe.html",
+		expectedRecipe: &Recipe{
+			CreativeWork: CreativeWork{
+				Thing: Thing{
+					Name:        "Zucchini Lasagna With Beef and Sausage",
+					Image:       "http://images.media-allrecipes.com/userphotos/720x405/1104956.jpg",
+					Description: `"This recipe is perfect if you have extra zucchini from the garden and/or you are looking for a great lasagna while on the South Beach or Atkins diets. It replaces lasagna noodles with slices of zucchini, but still tastes like the lasagna you love!"`,
+				},
+				Author: "Jeff B.",
+			},
+			Nutrition: &NutritionInformation{
+				Calories:   "471 kcal",
+				FatContent: "25.3 g",
+			},
+		},
+	},
+}
+
 func TestParseRecipes(t *testing.T) {
-	file, err := os.Open("example_recipe.html")
+	for _, tc := range testCases {
+		testParseRecipes(t, tc.fileName, tc.expectedRecipe)
+	}
+}
+
+func testParseRecipes(t *testing.T, fileName string, expectedRecipe *Recipe) {
+	file, err := os.Open(fileName)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -28,56 +77,40 @@ func TestParseRecipes(t *testing.T) {
 	}
 	recipe := recipes[0]
 
-	expectedDatePublished, err := time.Parse("Jan 2, 2006", "May 8, 2009")
 	if err != nil {
 		t.Fatal(err)
 	}
-	expectedRecipe := &Recipe{
-		CreativeWork: CreativeWork{
-			Thing: Thing{
-				Name:        "Mom's World Famous Banana Bread",
-				Image:       "bananabread.jpg",
-				Description: "This classic banana bread recipe comes\n  from my mom -- the walnuts add a nice texture and flavor to the banana\n  bread.",
-			},
-			Author:        "John Smith",
-			DatePublished: expectedDatePublished,
-		},
-		Nutrition: &NutritionInformation{
-			Calories:   "240 calories",
-			FatContent: "9 grams fat",
-		},
-	}
 
 	if recipe.Name != expectedRecipe.Name {
-		t.Errorf("Expected name to be %s, got %s", expectedRecipe.Name, recipe.Name)
+		t.Errorf("Expected name to be %q, got %q", expectedRecipe.Name, recipe.Name)
 	}
 	if recipe.Author != expectedRecipe.Author {
-		t.Errorf("Expected author to be %s, got %s", expectedRecipe.Author, recipe.Author)
+		t.Errorf("Expected author to be %q, got %q", expectedRecipe.Author, recipe.Author)
 	}
 	if recipe.DatePublished != expectedRecipe.DatePublished {
-		t.Errorf("Expected datePublished to be %s, got %s", expectedRecipe.DatePublished, recipe.DatePublished)
+		t.Errorf("Expected datePublished to be %q, got %q", expectedRecipe.DatePublished, recipe.DatePublished)
 	}
 	if recipe.Image != expectedRecipe.Image {
-		t.Errorf("Expected image to be %s, got %s", expectedRecipe.Image, recipe.Image)
+		t.Errorf("Expected image to be %q, got %q", expectedRecipe.Image, recipe.Image)
 	}
 	if recipe.Description != expectedRecipe.Description {
-		t.Errorf("Expected description to be %s, got %s", expectedRecipe.Description, recipe.Description)
+		t.Errorf("Expected description to be %q, got %q", expectedRecipe.Description, recipe.Description)
 	}
 	if recipe.PrepTime != expectedRecipe.PrepTime {
-		t.Errorf("Expected prepTime to be %s, got %s", expectedRecipe.PrepTime, recipe.PrepTime)
+		t.Errorf("Expected prepTime to be %q, got %q", expectedRecipe.PrepTime, recipe.PrepTime)
 	}
 	if recipe.CookTime != expectedRecipe.CookTime {
-		t.Errorf("Expected cookTime to be %s, got %s", expectedRecipe.CookTime, recipe.CookTime)
+		t.Errorf("Expected cookTime to be %q, got %q", expectedRecipe.CookTime, recipe.CookTime)
 	}
 	if recipe.Yield != expectedRecipe.Yield {
-		t.Errorf("Expected recipeYield to be %s, got %s", expectedRecipe.Yield, recipe.Yield)
+		t.Errorf("Expected recipeYield to be %q, got %q", expectedRecipe.Yield, recipe.Yield)
 	}
 	if recipe.Nutrition != nil {
 		if recipe.Nutrition.Calories != expectedRecipe.Nutrition.Calories {
-			t.Errorf("Expected nutrition.calories to be %s, got %s", expectedRecipe.Nutrition.Calories, recipe.Nutrition.Calories)
+			t.Errorf("Expected nutrition.calories to be %q, got %q", expectedRecipe.Nutrition.Calories, recipe.Nutrition.Calories)
 		}
 		if recipe.Nutrition.FatContent != expectedRecipe.Nutrition.FatContent {
-			t.Errorf("Expected nutrition.fatContent to be %s, got %s", expectedRecipe.Nutrition.FatContent, recipe.Nutrition.FatContent)
+			t.Errorf("Expected nutrition.fatContent to be %q, got %q", expectedRecipe.Nutrition.FatContent, recipe.Nutrition.FatContent)
 		}
 	} else {
 		t.Error("Missing nutrition data")
