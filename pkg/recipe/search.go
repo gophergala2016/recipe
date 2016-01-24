@@ -1,13 +1,15 @@
 package recipe
 
 import (
+	"fmt"
 	"github.com/gophergala2016/recipe/pkg/repo"
 	"github.com/gophergala2016/recipe/pkg/repo/allrecipes"
 	"golang.org/x/net/context"
 )
 
-func Search(cacheFileName, term string, options repo.SearchOptions) ([]repo.RecipeLink, error) {
-	cache, err := repo.OpenJsonFileCache(cacheFileName)
+func Search(dbPath, term string, options repo.SearchOptions) ([]*repo.RecipeLink, error) {
+	fmt.Println("Loading database...")
+	cache, err := repo.OpenBleveCache(dbPath)
 	if err != nil {
 		return nil, err
 	}

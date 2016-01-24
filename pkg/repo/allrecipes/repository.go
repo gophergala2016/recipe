@@ -23,8 +23,8 @@ func (r *Repository) Refresh(ctx context.Context) error {
 	return nil
 }
 
-func (r *Repository) Search(ctx context.Context, term string, opt repo.SearchOptions) ([]repo.RecipeLink, error) {
-	return r.cache.Search(term, opt)
+func (r *Repository) Search(ctx context.Context, term string, opt repo.SearchOptions) ([]*repo.RecipeLink, error) {
+	return r.cache.Search(ctx, term, opt)
 }
 
 func (r *Repository) Get(ctx context.Context, url string) ([]*schema.Recipe, error) {

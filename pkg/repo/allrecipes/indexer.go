@@ -12,29 +12,11 @@ const (
 	mainpage = "http://allrecipes.com"
 )
 
-type entry struct {
-	title       string
-	description string
-	url         string
-}
-
-func (e *entry) Title() string {
-	return e.title
-}
-
-func (e *entry) Description() string {
-	return e.description
-}
-
-func (e *entry) URL() string {
-	return e.url
-}
-
 type job struct {
 	url     string
 	err     error
 	doc     *goquery.Document
-	results []*entry
+	results []*repo.RecipeLink
 }
 
 func index(ctx context.Context, lcache repo.LocalCache) {
@@ -105,7 +87,7 @@ func parse(ctx context.Context, in <-chan *job, out chan<- *job) {
 				return
 			}
 			doc := j.doc
-			j.results = make([]*entry, 0)
+			j.results = make([]*repo.RecipeLink, 0)
 			articles := doc.Find("article")
 			articles.Each(func(i int, article *goquery.Selection) {
 				as := article.ChildrenFiltered("a[data-internal-referrer-link='recipe hub']")
@@ -124,10 +106,10 @@ func parse(ctx context.Context, in <-chan *job, out chan<- *job) {
 				descriptionSel := article.Find("div[class='rec-card__description']")
 				description := descriptionSel.Text()
 
-				j.results = append(j.results, &entry{
-					title:       title,
-					description: description,
-					url:         url,
+				j.results = append(j.results, &repo.RecipeLink{
+					Title:       title,
+					Description: description,
+					URL:         url,
 				})
 			})
 			out <- j

@@ -33,7 +33,7 @@ var refreshCmd = &cobra.Command{
 	Short: "Refresh all repositories.",
 	Long:  `Updates all repositories.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		dbpath := ""
+		dbpath := "./db"
 		cacheMap := viper.Get("cache")
 		if cache, ok := cacheMap.(map[interface{}]interface{}); ok {
 			dbpath = cache["dbpath"].(string)

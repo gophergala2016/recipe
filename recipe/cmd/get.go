@@ -33,7 +33,7 @@ var getCmd = &cobra.Command{
 	Short: "Downloads a recipe.",
 	Long:  `Downloads a recipe from a repository.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		dbpath := ""
+		dbpath := "./db"
 		cacheMap := viper.Get("cache")
 		if cache, ok := cacheMap.(map[interface{}]interface{}); ok {
 			dbpath = cache["dbpath"].(string)

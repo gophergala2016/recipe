@@ -10,9 +10,9 @@ import (
 	"os"
 )
 
-func Get(cacheFileName, term string) {
+func Get(dbPath, term string) {
 	fmt.Println("Loading database...")
-	cache, err := repo.OpenJsonFileCache(cacheFileName)
+	cache, err := repo.OpenBleveCache(dbPath)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -34,8 +34,8 @@ func Get(cacheFileName, term string) {
 	}
 
 	for i, link := range recipeLinks {
-		fmt.Printf("Downloading %d/%d...\n”", i, len(recipeLinks))
-		url := "http://allrecipes.com" + link.URL() // TODO This should not contain indexer specific code
+		fmt.Printf("Downloading %d/%d...\n”", i+1, len(recipeLinks))
+		url := "http://allrecipes.com" + link.URL // TODO This should not contain indexer specific code
 		recipes, err := r.Get(ctx, url)
 		if err != nil {
 			fmt.Println(err)

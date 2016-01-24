@@ -42,7 +42,7 @@ var searchCmd = &cobra.Command{
 	Short: "Search for recipes matching the pattern.",
 	Long:  `Search the repositories for recipes matching the pattern.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		dbpath := ""
+		dbpath := "./db"
 		cacheMap := viper.Get("cache")
 		if cache, ok := cacheMap.(map[interface{}]interface{}); ok {
 			dbpath = cache["dbpath"].(string)
@@ -59,7 +59,7 @@ var searchCmd = &cobra.Command{
 		}
 
 		for _, rl := range recipeLinks {
-			fmt.Printf("%s\t%s\n", rl.Title(), rl.URL())
+			fmt.Printf("%s\t%s\n", rl.Title, rl.URL)
 		}
 	},
 }
