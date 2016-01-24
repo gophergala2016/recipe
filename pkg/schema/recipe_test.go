@@ -1,20 +1,20 @@
 package schema
 
 import (
+	"bytes"
 	"github.com/PuerkitoBio/goquery"
-	"os"
 	"testing"
 	"time"
 )
 
 type testCase struct {
-	fileName       string
+	document       []byte
 	expectedRecipe *Recipe
 }
 
 var testCases = []*testCase{
 	&testCase{
-		fileName: "example_recipe.html",
+		document: schemaDotOrgExample,
 		expectedRecipe: &Recipe{
 			CreativeWork: CreativeWork{
 				Thing: Thing{
@@ -32,7 +32,7 @@ var testCases = []*testCase{
 		},
 	},
 	&testCase{
-		fileName: "allrecipes_dot_com_recipe.html",
+		document: allrecipeDotComPage,
 		expectedRecipe: &Recipe{
 			CreativeWork: CreativeWork{
 				Thing: Thing{
@@ -52,17 +52,13 @@ var testCases = []*testCase{
 
 func TestParseRecipes(t *testing.T) {
 	for _, tc := range testCases {
-		testParseRecipes(t, tc.fileName, tc.expectedRecipe)
+		testParseRecipes(t, tc.document, tc.expectedRecipe)
 	}
 }
 
-func testParseRecipes(t *testing.T, fileName string, expectedRecipe *Recipe) {
-	file, err := os.Open(fileName)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer file.Close()
-	doc, err := goquery.NewDocumentFromReader(file)
+func testParseRecipes(t *testing.T, b []byte, expectedRecipe *Recipe) {
+	r := bytes.NewReader(b)
+	doc, err := goquery.NewDocumentFromReader(r)
 	if err != nil {
 		t.Fatal(err)
 	}
