@@ -26,4 +26,9 @@ which contain the search term.
 recipe search <term>
 ```
 
+The `recipe get <term>` command will download all recipes which are indexed and match the term.
+```
+recipe get <term>
+```
+
 Use the `recipe -h` command to see additional information.
